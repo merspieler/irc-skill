@@ -4,6 +4,13 @@ import socket
 import socks
 import ssl
 
+from adapt.intent import IntentBuilder
+from mycroft.audio import wait_while_speaking
+from mycroft import MycroftSkill, intent_handler
+from mycroft.skills.core import MycroftSkill
+from mycroft.util.log import getLogger
+from mycroft.util import normalize
+
 LOGGER = getLogger(__name__)
 
 class IRCSkill(MycroftSkill):
@@ -16,34 +23,62 @@ class IRCSkill(MycroftSkill):
 		self.settings['proxy-port'] = 9050
 		self.settings['proxy-user'] = ""
 		self.settings['proxy-passwd'] = ""
-		self.settings['server'] = "irc.darkfasel.net"
-		self.settings['port'] = 6697
-		self.settings['channel'] = "ccc"
+		self.settings['server'] = "irc.esper.net"
+		self.settings['port'] = 6667
+		self.settings['channel'] = "dummy"
 		self.settings['user'] = "dummy|m"
 		self.settings['password'] = ""
-
-		socks.set_default_proxy(socks.SOCKS5, self.settings['proxy'], self.settings['proxy-port'], True, 'user','passwd')
-		socket.socket = socks.socksocket
+		self.settings['ssl'] = False
 
 
+		self.con_thread = Thread(target=self._main_loop)
+		self.con_thread.setDaemon(True)
+		self.con_thread.start()
+
+		if self.settings['proxy'] != "":
+			socks.set_default_proxy(socks.SOCKS5, self.settings['proxy'], self.settings['proxy-port'], True, 'user','passwd')
+			socket.socket = socks.socksocket
+
+
+	@intent_handler(IntentBuilder('ConnectIntent').require('connect'))
+	def handle_connect_intent(self, message):
+		if self.settings['ssl']:
+			irc_C = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket
+			irc = ssl.wrap_socket(irc_C)
+		else:
+			irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket
+
+		# Connect
+		try:
+			irc.connect((self.settings['server'], self.settings['port']))
+		except Exception, e:
+			self.speak("Unable to connect to server")
+
+		irc.setblocking(False)
+#		irc.send("PASS %s\n" % (password))
+		irc.send("USER " + self.settings['user'] + " " + self.settings['user'] + " " + self.settings['user'] + " :IRC via VOICE -> Mycroft\n")
+		irc.send("NICK " + self.settings['user'] + "\n")
+#		irc.send("PRIVMSG nickserv :identify %s %s\r\n" % (botnick, password))
+		irc.send("JOIN #"+ self.settings['channel'] +"\n")
+
+		self.speak("Connected")
+
+	def _main_loop(self):
+		pass
+
+	def stop(self):
+		pass
+
+def create_skill():
+	return IRCSkill()
 """
 ### Tail
 tail_files = [
     '/tmp/file-to-tail.txt'
 ]
 
-irc_C = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket
-irc = ssl.wrap_socket(irc_C)
 
 print "Establishing connection to [%s]" % (server)
-# Connect
-irc.connect((server, port))
-irc.setblocking(False)
-irc.send("PASS %s\n" % (password))
-irc.send("USER "+ botnick +" "+ botnick +" "+ botnick +" :meLon-Test\n")
-irc.send("NICK "+ botnick +"\n")
-irc.send("PRIVMSG nickserv :identify %s %s\r\n" % (botnick, password))
-irc.send("JOIN "+ channel +"\n")
 
 
 tail_line = []

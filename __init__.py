@@ -3,6 +3,7 @@ from time import sleep
 import socket
 import socks
 import ssl
+import re
 
 from adapt.intent import IntentBuilder
 from mycroft.audio import wait_while_speaking
@@ -23,48 +24,110 @@ class IRCSkill(MycroftSkill):
 		self.settings['proxy-port'] = 9050
 		self.settings['proxy-user'] = ""
 		self.settings['proxy-passwd'] = ""
-		self.settings['server'] = "irc.esper.net"
+		self.settings['server'] = "irc.flightgear.org"
 		self.settings['port'] = 6667
-		self.settings['channel'] = "dummy"
+		self.settings['channel'] = "mycroft"
 		self.settings['user'] = "dummy|m"
 		self.settings['password'] = ""
 		self.settings['ssl'] = False
 
-
-		self.con_thread = Thread(target=self._main_loop)
-		self.con_thread.setDaemon(True)
-		self.con_thread.start()
+		# IPC for comunicating between threads
+		self.irc_lock = False
+		self.irc_cmd = ""
+		self.irc_str = ""
 
 		if self.settings['proxy'] != "":
 			socks.set_default_proxy(socks.SOCKS5, self.settings['proxy'], self.settings['proxy-port'], True, 'user','passwd')
 			socket.socket = socks.socksocket
 
+	def initialize(self):
+		self.con_thread = Thread(target=self._main_loop)
+		self.con_thread.setDaemon(False)
+		self.con_thread.start()
 
 	@intent_handler(IntentBuilder('ConnectIntent').require('connect'))
 	def handle_connect_intent(self, message):
-		if self.settings['ssl']:
+		if self.con_thread.isAlive() == False:
+			self.speak("Restart thread")
+			self.con_thread.start()
+		if self.irc_lock == False:
+			self.speak("Connecting")
+			self.irc_lock == True
+			self.irc_cmd = "connect"
+			self.irc_str = ""# TODO !!!!!!!!!!!!!!
+			self.irc_lock = False
+
+	def _main_loop(self):
+		connected = False
+		while True:
+			sleep(2)
+			if connected:
+				text = ""
+				try:
+					text = irc.recv(2040)
+				except Exception:
+					continue
+	
+				if text != "":
+					self.speak(text)
+	
+					# Prevent Timeout
+					match = re.search("PING (.*)", text, re.I)
+					if match != None:
+						irc.send('PONG ' + match.group(1) + '\r\n')
+
+			cmd = ""
+			string = ""
+
+			if self.irc_cmd != "":
+				if self.irc_lock == False:
+					self.irc_lock = True
+					cmd = self.irc_cmd
+					string = self.irc_str
+					self.irc_cmd = ""
+					self.irc_str = ""
+					self.irc_lock = False
+
+			# check cmd and take action
+			if cmd == "connect":
+				connected, irc = self._irc_connect(self.settings['server'], self.settings['port'], self.settings['ssl'], self.settings['user'], self.settings['password'])
+				connected = True
+			elif cmd == "join":
+				pass
+			elif cmd == "part":
+				pass
+			elif cmd == "send":
+				pass
+
+	def _irc_connect(self, server, port, ssl_req, user, password):
+		self.speak("test ssl")
+		if ssl_req:
 			irc_C = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket
-			irc = ssl.wrap_socket(irc_C)
+			irc = ssl.wrap_socket(irc_C, cert_reqs=ssl.CERT_NONE)
 		else:
 			irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket
 
+		self.speak("test con")
 		# Connect
 		try:
-			irc.connect((self.settings['server'], self.settings['port']))
+			irc.connect((server, port))
 		except Exception, e:
-			self.speak("Unable to connect to server")
+			self.speak("Unable to connect to server.")
+			return False, irc
 
-		irc.setblocking(False)
-#		irc.send("PASS %s\n" % (password))
-		irc.send("USER " + self.settings['user'] + " " + self.settings['user'] + " " + self.settings['user'] + " :IRC via VOICE -> Mycroft\n")
-		irc.send("NICK " + self.settings['user'] + "\n")
+		self.speak("test auth")
+		irc.setblocking(0)
+		if password != "":
+			irc.send("PASS %s\n" % (password))
+		irc.send("USER " + user + " " + user + " " + user + " :IRC via VOICE -> Mycroft\n")
+		irc.send("NICK " + user + "\n")
 #		irc.send("PRIVMSG nickserv :identify %s %s\r\n" % (botnick, password))
-		irc.send("JOIN #"+ self.settings['channel'] +"\n")
 
 		self.speak("Connected")
+		return True, irc
 
-	def _main_loop(self):
-		pass
+	def _irc_join(self, channel):
+		irc.send("JOIN #"+ channel +"\n")
 
 	def stop(self):
 		pass

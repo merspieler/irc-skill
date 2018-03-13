@@ -1,5 +1,6 @@
 from threading import Thread
 from time import sleep
+import select
 import socket
 import socks
 import ssl
@@ -11,6 +12,11 @@ from mycroft import MycroftSkill, intent_handler
 from mycroft.skills.core import MycroftSkill
 from mycroft.util.log import getLogger
 from mycroft.util import normalize
+
+#########################################
+# RFC					#
+# https://tools.ietf.org/html/rfc1459	#
+#########################################
 
 LOGGER = getLogger(__name__)
 
@@ -27,6 +33,7 @@ class IRCSkill(MycroftSkill):
 		self.settings['server'] = "irc.flightgear.org"
 		self.settings['port'] = 6667
 		self.settings['channel'] = "mycroft"
+		self.settings['channel-password'] = ""
 		self.settings['user'] = "dummy|m"
 		self.settings['password'] = ""
 		self.settings['ssl'] = False
@@ -47,6 +54,7 @@ class IRCSkill(MycroftSkill):
 
 	@intent_handler(IntentBuilder('ConnectIntent').require('connect'))
 	def handle_connect_intent(self, message):
+		# TODO ability to connect to different server
 		if self.con_thread.isAlive() == False:
 			self.speak("Restart thread")
 			self.con_thread.start()
@@ -54,17 +62,59 @@ class IRCSkill(MycroftSkill):
 			self.speak("Connecting")
 			self.irc_lock == True
 			self.irc_cmd = "connect"
-			self.irc_str = ""# TODO !!!!!!!!!!!!!!
+			self.irc_str = ""
+			self.irc_lock = False
+
+	@intent_handler(IntentBuilder('JoinIntent').require('join'))
+	def handle_join_intent(self, message):
+		# TODO ability to join to different channels
+		if self.con_thread.isAlive() == False:
+			self.speak("Restart thread")
+			self.con_thread.start()
+		if self.irc_lock == False:
+			self.speak("Joining")
+			self.irc_lock == True
+			self.irc_cmd = "join"
+			self.irc_str = ""
+			self.irc_lock = False
+
+	@intent_handler(IntentBuilder('PartIntent').require('part'))
+	def handle_part_intent(self, message):
+		# TODO ability to join to different channels
+		if self.con_thread.isAlive() == False:
+			self.speak("Restart thread")
+			self.con_thread.start()
+		if self.irc_lock == False:
+			self.speak("Parting")
+			self.irc_lock == True
+			self.irc_cmd = "part"
+			self.irc_str = ""
+			self.irc_lock = False
+
+	@intent_handler(IntentBuilder('DisconnectIntent').require('disconnect'))
+	def handle_disconnect_intent(self, message):
+		# TODO ability to disconnect from different server
+		if self.con_thread.isAlive() == False:
+			self.speak("Restart thread")
+			self.con_thread.start()
+		if self.irc_lock == False:
+			self.speak("Disconnecting")
+			self.irc_lock == True
+			self.irc_cmd = "disconnect"
+			self.irc_str = ""
 			self.irc_lock = False
 
 	def _main_loop(self):
 		connected = False
+		joined = False
 		while True:
 			sleep(2)
 			if connected:
 				text = ""
 				try:
-					text = irc.recv(2040)
+					ready = select.select([irc], [], [], 2)
+					if ready[0]:
+						text = irc.recv(2040)
 				except Exception:
 					continue
 	
@@ -88,26 +138,44 @@ class IRCSkill(MycroftSkill):
 					self.irc_str = ""
 					self.irc_lock = False
 
-			# check cmd and take action
-			if cmd == "connect":
-				connected, irc = self._irc_connect(self.settings['server'], self.settings['port'], self.settings['ssl'], self.settings['user'], self.settings['password'])
-				connected = True
-			elif cmd == "join":
-				pass
-			elif cmd == "part":
-				pass
-			elif cmd == "send":
-				pass
+			if cmd != "":
+				# check cmd and take action
+				if cmd == "connect":
+					# TODO add ability to connect to more than one server
+					if connected == False:
+						connected, irc = self._irc_connect(self.settings['server'], self.settings['port'], self.settings['ssl'], self.settings['user'], self.settings['password'])
+					else:
+						self.speak("Already connected")
+	
+				elif cmd == "join":
+					self.speak("test")
+					if connected:
+						joined = self._irc_join(irc, self.settings['channel'], self.settings['channel-password'])
+					else:
+						self.speak("Please connect to a server first")
+	
+				elif cmd == "part":
+					pass
+	
+				elif cmd == "disconnect":
+					if connected:
+						connected = self._irc_disconnect(irc)
+					else:
+						self.speak("I'm to no server connected")
+	
+					if connected == False:
+						joined = False
+	
+				elif cmd == "send":
+					pass
 
 	def _irc_connect(self, server, port, ssl_req, user, password):
-		self.speak("test ssl")
 		if ssl_req:
 			irc_C = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket
 			irc = ssl.wrap_socket(irc_C, cert_reqs=ssl.CERT_NONE)
 		else:
 			irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket
 
-		self.speak("test con")
 		# Connect
 		try:
 			irc.connect((server, port))
@@ -115,7 +183,6 @@ class IRCSkill(MycroftSkill):
 			self.speak("Unable to connect to server.")
 			return False, irc
 
-		self.speak("test auth")
 		irc.setblocking(0)
 		if password != "":
 			irc.send("PASS %s\n" % (password))
@@ -126,8 +193,22 @@ class IRCSkill(MycroftSkill):
 		self.speak("Connected")
 		return True, irc
 
-	def _irc_join(self, channel):
+	def _irc_join(self, irc, channel, channel_password):
+		# TODO add steps to be able to use a pw
 		irc.send("JOIN #"+ channel +"\n")
+		self.speak("Channel " + channel + " joined")
+		return True
+
+	def _irc_part(self):
+		pass
+
+	def _irc_disconnect(self, irc):
+		irc.send("QUIT :Disconnected my mycroft")
+		self.speak("Disconnected")
+		return False # this is the value that's written in `connected`
+
+	def _irc_send(self, irc, to, msg):
+		pass
 
 	def stop(self):
 		pass

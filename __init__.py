@@ -31,12 +31,14 @@ class IRCSkill(MycroftSkill):
 		self.settings['proxy-user'] = ""
 		self.settings['proxy-passwd'] = ""
 		self.settings['server'] = "irc.flightgear.org"
+		self.settings['server-password'] = ""
 		self.settings['port'] = 6667
 		self.settings['channel'] = "mycroft"
 		self.settings['channel-password'] = ""
 		self.settings['user'] = "dummy|m"
 		self.settings['password'] = ""
 		self.settings['ssl'] = False
+		self.settings['debug'] = False
 
 		# IPC for comunicating between threads
 		self.irc_lock = False
@@ -104,6 +106,22 @@ class IRCSkill(MycroftSkill):
 			self.irc_str = ""
 			self.irc_lock = False
 
+	@intent_handler(IntentBuilder('SendIntent').require('send'))
+	def handle_send_intent(self, message):
+		# TODO ability to send to different users and channels
+		if self.con_thread.isAlive() == False:
+			self.speak("Restart thread")
+			self.con_thread.start()
+		if self.irc_lock == False:
+			response = self.get_response("get_msg")
+			if response != None:
+				self.irc_lock == True
+				self.irc_cmd = "send"
+				self.irc_str = response
+				self.irc_lock = False
+			else:
+				self.speak("I didn't understand a message")
+
 	def _main_loop(self):
 		connected = False
 		joined = False
@@ -119,7 +137,8 @@ class IRCSkill(MycroftSkill):
 					continue
 	
 				if text != "":
-#					self.speak(text)
+					if self.settings['debug']:
+						self.speak(text)
 	
 					# Prevent Timeout
 					match = re.search("PING (.*)", text)
@@ -178,7 +197,7 @@ class IRCSkill(MycroftSkill):
 				if cmd == "connect":
 					# TODO add ability to connect to more than one server
 					if connected == False:
-						connected, irc = self._irc_connect(self.settings['server'], self.settings['port'], self.settings['ssl'], self.settings['user'], self.settings['password'])
+						connected, irc = self._irc_connect(self.settings['server'], self.settings['port'], self.settings['ssl'], self.settings['server-password'], self.settings['user'], self.settings['password'])
 					else:
 						self.speak("Already connected")
 	
@@ -189,7 +208,7 @@ class IRCSkill(MycroftSkill):
 						self.speak("Please connect to a server first")
 	
 				elif cmd == "part":
-					pass
+					joined = self._irc_part(irc, self.settings['channel'])
 	
 				elif cmd == "disconnect":
 					if connected:
@@ -203,26 +222,34 @@ class IRCSkill(MycroftSkill):
 				elif cmd == "send":
 					pass
 
-	def _irc_connect(self, server, port, ssl_req, user, password):
+	def _irc_connect(self, server, port, ssl_req, server_password, user, password):
 		if ssl_req:
+			if self.settings['debug']:
+				self.speak("Use SSL")
 			irc_C = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket
 			irc = ssl.wrap_socket(irc_C, cert_reqs=ssl.CERT_NONE)
 		else:
+			if self.settings['debug']:
+				self.speak("Connect without ssl")
 			irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket
 
 		# Connect
 		try:
+			irc.settimeout(15)
 			irc.connect((server, port))
-		except Exception, e:
+		except Exception as e:
 			self.speak("Unable to connect to server.")
+			if self.settings['debug']:
+				self.speak("Error: " + str(e))
 			return False, irc
 
 		irc.setblocking(0)
-		if password != "":
+		if server_password != "":
 			irc.send("PASS %s\n" % (password))
 		irc.send("USER " + user + " " + user + " " + user + " :IRC via VOICE -> Mycroft\n")
 		irc.send("NICK " + user + "\n")
-#		irc.send("PRIVMSG nickserv :identify %s %s\r\n" % (botnick, password))
+		if password != "":
+			irc.send("PRIVMSG nickserv :identify %s %s\r\n" % (user, password))
 
 		self.speak("Connected")
 		return True, irc
@@ -233,8 +260,10 @@ class IRCSkill(MycroftSkill):
 		self.speak("Channel " + channel + " joined")
 		return True
 
-	def _irc_part(self):
-		pass
+	def _irc_part(self, irc, channel):
+		irc.send("PART #" + channel)
+		self.speak("Parted")
+		return False # this is the value that's written in `joined`
 
 	def _irc_disconnect(self, irc):
 		irc.send("QUIT :Disconnected my mycroft\n")

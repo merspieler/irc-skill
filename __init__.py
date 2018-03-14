@@ -26,7 +26,7 @@ class IRCSkill(MycroftSkill):
 		# TODO make them configureable
 		# TODO make them into lists
 		# options
-		self.settings['proxy'] = ""
+		self.settings['proxy'] = "127.0.0.1"
 		self.settings['proxy-port'] = 9050
 		self.settings['proxy-user'] = ""
 		self.settings['proxy-passwd'] = ""
@@ -45,11 +45,14 @@ class IRCSkill(MycroftSkill):
 		self.irc_cmd = ""
 		self.irc_str = ""
 
+	def initialize(self):
 		if self.settings['proxy'] != "":
+			if self.settings['debug']:
+				self.speak("Using proxy: " + self.settings['proxy'])
+				self.speak("Port: " + str(self.settings['proxy-port']))
 			socks.set_default_proxy(socks.SOCKS5, self.settings['proxy'], self.settings['proxy-port'], True, 'user','passwd')
 			socket.socket = socks.socksocket
 
-	def initialize(self):
 		self.con_thread = Thread(target=self._main_loop)
 		self.con_thread.setDaemon(False)
 		self.con_thread.start()

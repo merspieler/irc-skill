@@ -235,6 +235,9 @@ class IRCSkill(MycroftSkill):
 
 		# Connect
 		try:
+			if self.settings['debug']:
+				self.speak("Server: " + server)
+				self.speak("Port: " + str(port))
 			irc.settimeout(60)
 			irc.connect((server, port))
 		except Exception as e:

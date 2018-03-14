@@ -26,7 +26,7 @@ class IRCSkill(MycroftSkill):
 		# TODO make them configureable
 		# TODO make them into lists
 		# options
-		self.settings['proxy'] = "127.0.0.1"
+		self.settings['proxy'] = ""
 		self.settings['proxy-port'] = 9050
 		self.settings['proxy-user'] = ""
 		self.settings['proxy-passwd'] = ""
@@ -119,12 +119,47 @@ class IRCSkill(MycroftSkill):
 					continue
 	
 				if text != "":
-					self.speak(text)
+#					self.speak(text)
 	
 					# Prevent Timeout
-					match = re.search("PING (.*)", text, re.I)
+					match = re.search("PING (.*)", text)
 					if match != None:
 						irc.send('PONG ' + match.group(1) + '\r\n')
+
+					match = re.search(":(.*)!.*@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} QUIT", text)
+					if match != None:
+						self.speak(match.group(1) + " has disconnected")
+
+					match = re.search(":(.*)!.*@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} JOIN", text)
+					if match != None:
+						if match.group(1) != self.settings['user']:
+							self.speak(match.group(1) + " has joined the channel")
+
+					match = re.search(":(.*)!.*@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} PART", text)
+					if match != None:
+						self.speak(match.group(1) + " has left the channel")
+
+					match = re.search(":(.*)!.*@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} QUIT", text)
+					if match != None:
+						self.speak(match.group(1) + " has disconnected")
+
+					match = re.search(":(.*)!.*@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} PRIVMSG #.* :(.*)", text)
+					if match != None:
+						self.speak(match.group(1) + " has written in " + match.group(2) + ": " + match.group(3))
+
+# TODO fix
+#					match = re.search(":(.*)!.*@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} PRIVMSG " + self.settings['user'] + " :(.*)", text)
+#					if match != None:
+#						self.speak(match.group(1) + " has written you a private message: " + match.group(2))
+
+					match = re.search(":(.*)!.*@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} NOTICE #.* :(.*)", text)
+					if match != None:
+						self.speak(match.group(1) + " has written a notice to " + match.group(2) + ". The notice is: " + match.group(3))
+
+# TODO fix
+#					match = re.search(":(.*)!.*@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} NOTICE " + self.settings['user'] + " :(.*)", text)
+#					if match != None:
+#						self.speak(match.group(1) + " has written a private notice to you. The notice is: " + match.group(2))
 
 			cmd = ""
 			string = ""
@@ -148,7 +183,6 @@ class IRCSkill(MycroftSkill):
 						self.speak("Already connected")
 	
 				elif cmd == "join":
-					self.speak("test")
 					if connected:
 						joined = self._irc_join(irc, self.settings['channel'], self.settings['channel-password'])
 					else:
@@ -203,7 +237,8 @@ class IRCSkill(MycroftSkill):
 		pass
 
 	def _irc_disconnect(self, irc):
-		irc.send("QUIT :Disconnected my mycroft")
+		irc.send("QUIT :Disconnected my mycroft\n")
+		irc.close()
 		self.speak("Disconnected")
 		return False # this is the value that's written in `connected`
 

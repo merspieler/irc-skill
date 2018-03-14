@@ -220,7 +220,7 @@ class IRCSkill(MycroftSkill):
 						joined = False
 	
 				elif cmd == "send":
-					pass
+					self._irc_send(irc, "#" + self.settings['channel'], string)
 
 	def _irc_connect(self, server, port, ssl_req, server_password, user, password):
 		if ssl_req:
@@ -235,7 +235,7 @@ class IRCSkill(MycroftSkill):
 
 		# Connect
 		try:
-			irc.settimeout(15)
+			irc.settimeout(60)
 			irc.connect((server, port))
 		except Exception as e:
 			self.speak("Unable to connect to server.")
@@ -272,7 +272,8 @@ class IRCSkill(MycroftSkill):
 		return False # this is the value that's written in `connected`
 
 	def _irc_send(self, irc, to, msg):
-		pass
+		irc.send("PRIVMSG " + to + " :" + msg)
+		self.speak("Message sent")
 
 	def stop(self):
 		pass

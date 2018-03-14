@@ -125,6 +125,16 @@ class IRCSkill(MycroftSkill):
 			else:
 				self.speak("I didn't understand a message")
 
+	@intent_handler(IntentBuilder('DebugEnableIntent').require('debug-enable'))
+	def handle_debug_enable_intent(self, message):
+		self.settings['debug'] = True
+		self.speak("Debugging enabled")
+
+	@intent_handler(IntentBuilder('DebugDisableIntent').require('debug-disable'))
+	def handle_debug_disable_intent(self, message):
+		self.settings['debug'] = False
+		self.speak("Debugging disabled")
+
 	def _main_loop(self):
 		connected = False
 		joined = False

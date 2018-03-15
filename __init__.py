@@ -53,7 +53,7 @@ class IRCSkill(MycroftSkill):
 			socks.set_default_proxy(socks.SOCKS5, self.settings['proxy'], self.settings['proxy-port'], True, 'user','passwd')
 			socket.socket = socks.socksocket
 
-			self._irc_start_thread()
+		self._irc_start_thread()
 
 	@intent_handler(IntentBuilder('ConnectIntent').require('connect'))
 	def handle_connect_intent(self, message):

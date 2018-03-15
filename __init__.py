@@ -241,28 +241,25 @@ class IRCSkill(MycroftSkill):
 						self.speak("Please connect to a server and join a channel first")
 
 	def _irc_connect(self, server, port, ssl_req, server_password, user, password):
-		if ssl_req:
-			if self.settings['debug']:
-				self.speak("Use SSL")
-			irc_C = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket
-			irc = ssl.wrap_socket(irc_C, cert_reqs=ssl.CERT_NONE)
-		else:
-			if self.settings['debug']:
-				self.speak("Connect without ssl")
-			irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket
+		irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket
 
 		# Connect
 		try:
 			if self.settings['debug']:
 				self.speak("Server: " + server)
 				self.speak("Port: " + str(port))
-			irc.settimeout(60)
+			irc.settimeout(15)
 			irc.connect((server, port))
 		except Exception as e:
 			self.speak("Unable to connect to server.")
 			if self.settings['debug']:
 				self.speak("Error: " + str(e))
 			return False, irc
+
+		if ssl_req:
+			if self.settings['debug']:
+				self.speak("Use SSL")
+			irc = ssl.wrap_socket(irc)
 
 		irc.setblocking(0)
 		if server_password != "":

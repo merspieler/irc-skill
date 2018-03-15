@@ -53,16 +53,13 @@ class IRCSkill(MycroftSkill):
 			socks.set_default_proxy(socks.SOCKS5, self.settings['proxy'], self.settings['proxy-port'], True, 'user','passwd')
 			socket.socket = socks.socksocket
 
-		self.con_thread = Thread(target=self._main_loop)
-		self.con_thread.setDaemon(False)
-		self.con_thread.start()
+			self._irc_start_thread()
 
 	@intent_handler(IntentBuilder('ConnectIntent').require('connect'))
 	def handle_connect_intent(self, message):
 		# TODO ability to connect to different server
 		if self.con_thread.isAlive() == False:
-			self.speak("Restart thread")
-			self.con_thread.start()
+			self._irc_start_thread()
 		if self.irc_lock == False:
 			self.speak("Connecting")
 			self.irc_lock == True
@@ -74,8 +71,7 @@ class IRCSkill(MycroftSkill):
 	def handle_join_intent(self, message):
 		# TODO ability to join to different channels
 		if self.con_thread.isAlive() == False:
-			self.speak("Restart thread")
-			self.con_thread.start()
+			self._irc_start_thread()
 		if self.irc_lock == False:
 			self.speak("Joining")
 			self.irc_lock == True
@@ -87,8 +83,7 @@ class IRCSkill(MycroftSkill):
 	def handle_part_intent(self, message):
 		# TODO ability to join to different channels
 		if self.con_thread.isAlive() == False:
-			self.speak("Restart thread")
-			self.con_thread.start()
+			self._irc_start_thread()
 		if self.irc_lock == False:
 			self.speak("Parting")
 			self.irc_lock == True
@@ -100,8 +95,7 @@ class IRCSkill(MycroftSkill):
 	def handle_disconnect_intent(self, message):
 		# TODO ability to disconnect from different server
 		if self.con_thread.isAlive() == False:
-			self.speak("Restart thread")
-			self.con_thread.start()
+			self._irc_start_thread()
 		if self.irc_lock == False:
 			self.speak("Disconnecting")
 			self.irc_lock == True
@@ -113,8 +107,7 @@ class IRCSkill(MycroftSkill):
 	def handle_send_intent(self, message):
 		# TODO ability to send to different users and channels
 		if self.con_thread.isAlive() == False:
-			self.speak("Restart thread")
-			self.con_thread.start()
+			self._irc_start_thread()
 		if self.irc_lock == False:
 			response = self.get_response("get_msg")
 			if response != None:
@@ -158,38 +151,38 @@ class IRCSkill(MycroftSkill):
 					if match != None:
 						irc.send('PONG ' + match.group(1) + '\r\n')
 
-					match = re.search(":(.*)!.*@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} QUIT", text)
+					match = re.search(":(.*)!.*@.* QUIT", text)
 					if match != None:
 						self.speak(match.group(1) + " has disconnected")
 
-					match = re.search(":(.*)!.*@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} JOIN", text)
+					match = re.search(":(.*)!.*@.* JOIN", text)
 					if match != None:
 						if match.group(1) != self.settings['user']:
 							self.speak(match.group(1) + " has joined the channel")
 
-					match = re.search(":(.*)!.*@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} PART", text)
+					match = re.search(":(.*)!.*@.* PART", text)
 					if match != None:
 						self.speak(match.group(1) + " has left the channel")
 
-					match = re.search(":(.*)!.*@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} QUIT", text)
+					match = re.search(":(.*)!.*@.* QUIT", text)
 					if match != None:
 						self.speak(match.group(1) + " has disconnected")
 
-					match = re.search(":(.*)!.*@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} PRIVMSG #.* :(.*)", text)
+					match = re.search(":(.*)!.*@.* PRIVMSG #(.*) :(.*)", text)
 					if match != None:
 						self.speak(match.group(1) + " has written in " + match.group(2) + ": " + match.group(3))
 
 # TODO fix
-#					match = re.search(":(.*)!.*@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} PRIVMSG " + self.settings['user'] + " :(.*)", text)
+#					match = re.search(":(.*)!.*@.* PRIVMSG " + self.settings['user'] + " :(.*)", text)
 #					if match != None:
 #						self.speak(match.group(1) + " has written you a private message: " + match.group(2))
 
-					match = re.search(":(.*)!.*@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} NOTICE #.* :(.*)", text)
+					match = re.search(":(.*)!.*@.* NOTICE #.* :(.*)", text)
 					if match != None:
 						self.speak(match.group(1) + " has written a notice to " + match.group(2) + ". The notice is: " + match.group(3))
 
 # TODO fix
-#					match = re.search(":(.*)!.*@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} NOTICE " + self.settings['user'] + " :(.*)", text)
+#					match = re.search(":(.*)!.*@.* NOTICE " + self.settings['user'] + " :(.*)", text)
 #					if match != None:
 #						self.speak(match.group(1) + " has written a private notice to you. The notice is: " + match.group(2))
 
@@ -221,7 +214,13 @@ class IRCSkill(MycroftSkill):
 						self.speak("Please connect to a server first")
 	
 				elif cmd == "part":
-					joined = self._irc_part(irc, self.settings['channel'])
+					if connected:
+						if joined:
+							joined = self._irc_part(irc, self.settings['channel'])
+						else:
+							self.speak("I'm in no channel I could part from")
+					else:
+						self.speak("Not connected to a server")
 	
 				elif cmd == "disconnect":
 					if connected:
@@ -233,7 +232,13 @@ class IRCSkill(MycroftSkill):
 						joined = False
 	
 				elif cmd == "send":
-					self._irc_send(irc, "#" + self.settings['channel'], string)
+					if connected:
+						if joined:
+							self._irc_send(irc, "#" + self.settings['channel'], string)
+						else:
+							self.speak("Please join a channel first")
+					else:
+						self.speak("Please connect to a server and join a channel first")
 
 	def _irc_connect(self, server, port, ssl_req, server_password, user, password):
 		if ssl_req:
@@ -288,8 +293,15 @@ class IRCSkill(MycroftSkill):
 		return False # this is the value that's written in `connected`
 
 	def _irc_send(self, irc, to, msg):
-		irc.send("PRIVMSG " + to + " :" + msg)
+		irc.send("PRIVMSG " + to + " :" + msg + "\n")
 		self.speak("Message sent")
+
+	def _irc_start_thread(self):
+		if self.settings['debug']:
+			self.speak("Restart thread")
+		self.con_thread = Thread(target=self._main_loop)
+		self.con_thread.setDaemon(False)
+		self.con_thread.start()
 
 	def stop(self):
 		pass

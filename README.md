@@ -5,14 +5,19 @@ Basic IRC client
 Mycroft skill that lets you use IRC via voice commands.
 
 This skill is still under active development.  
-__Not functional.__
 
 ## Requirements
 
 ## Examples
 ### Normal use
-* "join channel qutebrowser on freenode"
-* "send an irc message to merspieler"
+_Currently available commands_
+* "connect to irc"
+* "join irc channel"
+* "send irc message"
+* "part from irc channel"
+* "disconnect from irc server"
+
+_**Note** settings are set in the `settings.json` file. Right now it's only possible to join one server and one channel at a tim._
 ### Configuration
 
 ## Credits 

@@ -26,7 +26,7 @@ class IRCSkill(MycroftSkill):
 		# TODO make them configureable
 		# TODO make them into lists
 		# options
-		self.settings['proxy'] = "127.0.0.1"
+		self.settings['proxy'] = ""
 		self.settings['proxy-port'] = 9050
 		self.settings['proxy-user'] = ""
 		self.settings['proxy-passwd'] = ""

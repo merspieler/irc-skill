@@ -141,50 +141,51 @@ class IRCSkill(MycroftSkill):
 						text = irc.recv(2040)
 				except Exception:
 					continue
+
+				for line in text.splitlines():
+					if line != "":
+						if self.settings['debug']:
+							self.speak(str(line))
+							pass
+		
+						# Prevent Timeout
+						match = re.search("^PING (.*)$", line, re.M)
+						if match != None:
+							irc.send('PONG ' + match.group(1) + '\r\n')
 	
-				if text != "":
-					if self.settings['debug']:
-						self.speak(text)
+						match = re.search("^:(.*)!.*@.* QUIT", line, re.M)
+						if match != None:
+							self.speak(match.group(1) + " has disconnected")
 	
-					# Prevent Timeout
-					match = re.search("PING (.*)", text)
-					if match != None:
-						irc.send('PONG ' + match.group(1) + '\r\n')
+						match = re.search("^:(.*)!.*@.* JOIN", line, re.M)
+						if match != None:
+							if match.group(1) != self.settings['user']:
+								self.speak(match.group(1) + " has joined the channel")
+	
+						match = re.search("^:(.*)!.*@.* PART", line, re.M)
+						if match != None:
+							self.speak(match.group(1) + " has left the channel")
+	
+						match = re.search("^:(.*)!.*@.* QUIT", line, re.M)
+						if match != None:
+							self.speak(match.group(1) + " has disconnected")
+	
+						match = re.search("^:(.*)!.*@.* PRIVMSG #(.*) :(.*)", line, re.M)
+						if match != None:
+							self.speak(match.group(1) + " has written in " + match.group(2) + ": " + match.group(3))
+	
+						match = re.search("^:(.*)!.*@.* NOTICE #.* :(.*)", line, re.M)
+						if match != None:
+							self.speak(match.group(1) + " has written a notice to " + match.group(2) + ". The notice is: " + match.group(3))
+	
+						match = re.search("^:(.*)!.*@.* PRIVMSG " + re.escape(self.settings['user']) + " :(.*)$", line, re.M)
+						if match != None:
+							self.speak(line)
+							self.speak(match.group(1) + " has written you a private message: " + match.group(2))
 
-					match = re.search(":(.*)!.*@.* QUIT", text)
-					if match != None:
-						self.speak(match.group(1) + " has disconnected")
-
-					match = re.search(":(.*)!.*@.* JOIN", text)
-					if match != None:
-						if match.group(1) != self.settings['user']:
-							self.speak(match.group(1) + " has joined the channel")
-
-					match = re.search(":(.*)!.*@.* PART", text)
-					if match != None:
-						self.speak(match.group(1) + " has left the channel")
-
-					match = re.search(":(.*)!.*@.* QUIT", text)
-					if match != None:
-						self.speak(match.group(1) + " has disconnected")
-
-					match = re.search(":(.*)!.*@.* PRIVMSG #(.*) :(.*)", text)
-					if match != None:
-						self.speak(match.group(1) + " has written in " + match.group(2) + ": " + match.group(3))
-
-# TODO fix
-#					match = re.search(":(.*)!.*@.* PRIVMSG " + self.settings['user'] + " :(.*)", text)
-#					if match != None:
-#						self.speak(match.group(1) + " has written you a private message: " + match.group(2))
-
-					match = re.search(":(.*)!.*@.* NOTICE #.* :(.*)", text)
-					if match != None:
-						self.speak(match.group(1) + " has written a notice to " + match.group(2) + ". The notice is: " + match.group(3))
-
-# TODO fix
-#					match = re.search(":(.*)!.*@.* NOTICE " + self.settings['user'] + " :(.*)", text)
-#					if match != None:
-#						self.speak(match.group(1) + " has written a private notice to you. The notice is: " + match.group(2))
+						match = re.search(":(.*)!.*@.* NOTICE " + re.escape(self.settings['user']) + " :(.*)", line)
+						if match != None:
+							self.speak(match.group(1) + " has written a private notice to you. The notice is: " + match.group(2))
 
 			cmd = ""
 			string = ""

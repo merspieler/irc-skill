@@ -7,6 +7,7 @@ Mycroft skill that lets you use IRC via voice commands.
 This skill is still under active development.  
 
 ## Requirements
+* `pysocks`
 
 ## Examples
 ### Normal use
@@ -27,10 +28,10 @@ Supported configuration options in the `settings.json` file:
   * `port`: The used port.
   * `ssl`: If SSL should be used (can be `True` or `False`)
   * `server-password`: The password for the server. **Note** This is only needed for password protected servers. For user password, see below.
-* Proxy
+* Proxy (Only socks proxys are supported)
   * `proxy`: The proxy adress. If empty, no proxy is used.
   * `proxy-port`: The port of the proxy.
-  * `proxy-user`: The user to authentificate with. _Only needed if athentification is required for the proxy._
+  * `proxy-user`: The user to authentificate with. _Only needed if authentification is required for the proxy._
   * `proxy-passwd`: The password to authentificate with.
 * User
   * `user`: The username.
@@ -40,7 +41,7 @@ Supported configuration options in the `settings.json` file:
   * `channel-password`: The channel password if required. _**Note** This feature isn't implemented yet._
 
 
-_Use this only for debuging purpose on the console_
+_Use the debuging mode only on the console. This will not work well for normal useage._
 * "Enable irc debug" Enables debug mode. This will print useful information for debugging and **ever** message recived. This includes messages like the `PING` message.
 * "Disable irc debug" Disables debug mode and goes back to normal output.
 

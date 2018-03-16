@@ -16,6 +16,10 @@ from mycroft.util import normalize
 #########################################
 # RFC					#
 # https://tools.ietf.org/html/rfc1459	#
+# We don't fullfil all aspects of the	#
+# RFC to keep it simple. If you think	#
+# a command is needed, feel free to	#
+# open a PR with your changes.		#
 #########################################
 
 LOGGER = getLogger(__name__)
@@ -153,6 +157,7 @@ class IRCSkill(MycroftSkill):
 						if match != None:
 							irc.send('PONG ' + match.group(1) + '\r\n')
 	
+						# reciving normal messages
 						match = re.search("^:(.*)!.*@.* QUIT", line, re.M)
 						if match != None:
 							self.speak(match.group(1) + " has disconnected")
@@ -186,6 +191,35 @@ class IRCSkill(MycroftSkill):
 						match = re.search(":(.*)!.*@.* NOTICE " + re.escape(self.settings['user']) + " :(.*)", line)
 						if match != None:
 							self.speak(match.group(1) + " has written a private notice to you. The notice is: " + match.group(2))
+
+
+						# reciving status codes
+						match = re.search("^:(\S*\.*.\S*) (\d{3}) (.*)", line)
+						if match != None:
+							code = int(match.group(2))
+
+							if self.settings['debug']:
+								self.speak("Return code: " + str(code))
+
+							# This list of handles replies is incomplete
+							if code == 401:
+								self.speak("The nickname wasn't found")
+
+							if code == 433:
+								self.speak("Your nickname is already in use")
+
+							if code == 464:
+								self.speak("It looks, like you password is wrong. Please check it")
+
+							if code == 465:
+								self.speak("Your banned on this server")
+
+						# handling special messages
+						match = re.search("^ERROR :Closing link", line)
+						if match != None:
+							self.speak("The server has closed the connection")
+							connected = False
+							irc.close()
 
 			cmd = ""
 			string = ""
@@ -240,6 +274,7 @@ class IRCSkill(MycroftSkill):
 							self.speak("Please join a channel first")
 					else:
 						self.speak("Please connect to a server and join a channel first")
+
 
 	def _irc_connect(self, server, port, ssl_req, server_password, user, password):
 		irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket

@@ -122,6 +122,10 @@ class IRCSkill(MycroftSkill):
 			else:
 				self.speak("I didn't understand a message")
 
+	@intent_handler(IntentBuilder('SetUserIntent').require('set-user'))
+	def handle_set_user_intent(self, message):
+		self._irc_set_user()
+
 	@intent_handler(IntentBuilder('DebugEnableIntent').require('debug-enable'))
 	def handle_debug_enable_intent(self, message):
 		self.settings['debug'] = True
@@ -277,6 +281,14 @@ class IRCSkill(MycroftSkill):
 
 
 	def _irc_connect(self, server, port, ssl_req, server_password, user, password):
+
+		# check if the default username is used and if so, ask the user to change it
+		if user == "dummy|m":
+			self.speak("You're using the default user name. Please change it now.")
+			changed = False
+			while changed == False:
+				changed = self._irc_set_user()
+
 		irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket
 
 		# Connect
@@ -309,8 +321,10 @@ class IRCSkill(MycroftSkill):
 		return True, irc
 
 	def _irc_join(self, irc, channel, channel_password):
-		# TODO add steps to be able to use a pw
-		irc.send("JOIN #"+ channel +"\n")
+		string = "JOIN #"+ channel
+		if channel_password != "":
+			string = string + " " + channel_password
+		irc.send(string +"\n")
 		self.speak("Channel " + channel + " joined")
 		return True
 
@@ -329,6 +343,18 @@ class IRCSkill(MycroftSkill):
 		irc.send("PRIVMSG " + to + " :" + msg + "\n")
 		self.speak("Message sent")
 
+	def _irc_set_user(self):
+		self.speak("Which user name do you want to use?")
+		wait_while_speaking()
+		response = self.get_response("dummy")
+		if response != None:
+			response = response.replace(" ", "")
+			self.settings['user'] = response
+			self.speak("User name changed")
+			return True
+		self.speak("I didn't understand a user name")
+		return False
+
 	def _irc_start_thread(self):
 		if self.settings['debug']:
 			self.speak("Restart thread")
@@ -341,44 +367,3 @@ class IRCSkill(MycroftSkill):
 
 def create_skill():
 	return IRCSkill()
-"""
-### Tail
-tail_files = [
-    '/tmp/file-to-tail.txt'
-]
-
-
-print "Establishing connection to [%s]" % (server)
-
-
-tail_line = []
-for i, tail in enumerate(tail_files):
-    tail_line.append('')
-
-
-while True:
-    time.sleep(2)
-
-    # Tail Files
-    for i, tail in enumerate(tail_files):
-        try:
-            f = open(tail, 'r')
-            line = f.readlines()[-1]
-            f.close()
-            if tail_line[i] != line:
-                tail_line[i] = line
-                irc.send("PRIVMSG %s :%s" % (channel, line))
-        except Exception as e:
-            print "Error with file %s" % (tail)
-            print e
-
-    try:
-        text=irc.recv(2040)
-        print text
-
-        # Prevent Timeout
-        if text.find('PING') != -1:
-            irc.send('PONG ' + text.split() [1] + '\r\n')
-    except Exception:
-        continue
-"""		

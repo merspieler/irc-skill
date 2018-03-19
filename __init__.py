@@ -34,14 +34,14 @@ class IRCSkill(MycroftSkill):
 		self.settings['proxy-port'] = 9050
 		self.settings['proxy-user'] = ""
 		self.settings['proxy-passwd'] = ""
-		self.settings['server'] = "irc.flightgear.org"
+		self.settings['server'] = "irc.freenode.net"
 		self.settings['server-password'] = ""
-		self.settings['port'] = 6667
+		self.settings['port'] = 6697
 		self.settings['channel'] = "mycroft"
 		self.settings['channel-password'] = ""
 		self.settings['user'] = "dummy|m"
 		self.settings['password'] = ""
-		self.settings['ssl'] = False
+		self.settings['ssl'] = True
 		self.settings['debug'] = False
 
 		# IPC for comunicating between threads

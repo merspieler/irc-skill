@@ -42,7 +42,7 @@ Supported configuration options in the `settings.json` file:
 
 
 _Use the debuging mode only on the console. This will not work well for normal useage._
-* "Enable irc debug" Enables debug mode. This will print useful information for debugging and **ever** message recived. This includes messages like the `PING` message.
+* "Enable irc debug" Enables debug mode. This will print useful information for debugging and **every** message recived. This includes messages like the `PING` message.
 * "Disable irc debug" Disables debug mode and goes back to normal output.
 
 ## Credits 

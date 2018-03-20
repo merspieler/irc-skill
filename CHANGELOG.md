@@ -15,5 +15,9 @@ tags:
 `Security` to invite users to upgrade in case of vulnerabilities.
 -->
 
+## [v0.1.1](https://github.com/merspieler/irc-skill/releases/tag/v0.1.1)
+### Fixed
+* Added missing .dialog and .voc files.
+
 ## [v0.1](https://github.com/merspieler/irc-skill/releases/tag/v0.1)
 Initial release.

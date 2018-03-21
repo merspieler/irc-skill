@@ -162,10 +162,6 @@ class IRCSkill(MycroftSkill):
 							irc.send('PONG ' + match.group(1) + '\r\n')
 	
 						# reciving normal messages
-						match = re.search("^:(.*)!.*@.* QUIT", line, re.M)
-						if match != None:
-							self.speak(match.group(1) + " has disconnected")
-	
 						match = re.search("^:(.*)!.*@.* JOIN", line, re.M)
 						if match != None:
 							if match.group(1) != self.settings['user']:

@@ -16,6 +16,8 @@ tags:
 -->
 
 ## v0.2 (unreleased)
+### Added
+* "Disconnected by server" handling. Resulting now in a reconnect.
 ### Fixed
 * Double messages on QUIT of other users.
 

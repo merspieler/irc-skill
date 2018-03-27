@@ -173,7 +173,16 @@ class IRCSkill(MycroftSkill):
 	
 						match = re.search("^:(.*)!.*@.* QUIT", line, re.M)
 						if match != None:
-							self.speak(match.group(1) + " has disconnected")
+							if match.group(1) == self.settings['user']:
+								self.speak("You have been disconnected. I try to reconnect you")
+								was_joined = joined
+								self._irc_disconnect(irc, True)
+								self._irc_connect(self.settings['server'], self.settings['port'], self.settings['ssl'], self.settings['server-password'], self.settings['user'], self.settings['password'], True)
+								self.speak("You are reconnected")
+								if was_joined:
+									self._irc_join(irc, self.settings['channel'], self.settings['channel-password'], True)
+							else:
+								self.speak(match.group(1) + " has disconnected")
 	
 						match = re.search("^:(.*)!.*@.* PRIVMSG #(.*) :(.*)", line, re.M)
 						if match != None:
@@ -276,7 +285,7 @@ class IRCSkill(MycroftSkill):
 						self.speak("Please connect to a server and join a channel first")
 
 
-	def _irc_connect(self, server, port, ssl_req, server_password, user, password):
+	def _irc_connect(self, server, port, ssl_req, server_password, user, password, quiet=False):
 
 		# check if the default username is used and if so, ask the user to change it
 		if user == "dummy|m":
@@ -313,26 +322,30 @@ class IRCSkill(MycroftSkill):
 		if password != "":
 			irc.send("PRIVMSG nickserv :identify %s %s\r\n" % (user, password))
 
-		self.speak("Connected")
+		if quiet == False:
+			self.speak("Connected")
 		return True, irc
 
-	def _irc_join(self, irc, channel, channel_password):
+	def _irc_join(self, irc, channel, channel_password, quiet=False):
 		string = "JOIN #"+ channel
 		if channel_password != "":
 			string = string + " " + channel_password
 		irc.send(string +"\n")
-		self.speak("Channel " + channel + " joined")
+		if quiet == False:
+			self.speak("Channel " + channel + " joined")
 		return True
 
-	def _irc_part(self, irc, channel):
+	def _irc_part(self, irc, channel, quiet=False):
 		irc.send("PART #" + channel)
-		self.speak("Parted")
+		if quiet == False:
+			self.speak("Parted")
 		return False # this is the value that's written in `joined`
 
-	def _irc_disconnect(self, irc):
+	def _irc_disconnect(self, irc, quiet=False):
 		irc.send("QUIT :Disconnected my mycroft\n")
 		irc.close()
-		self.speak("Disconnected")
+		if quiet == False:
+			self.speak("Disconnected")
 		return False # this is the value that's written in `connected`
 
 	def _irc_send(self, irc, to, msg):

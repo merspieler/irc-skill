@@ -43,6 +43,9 @@ class IRCSkill(MycroftSkill):
 		self.settings['password'] = ""
 		self.settings['ssl'] = True
 		self.settings['debug'] = False
+		self.settings['msg-join'] = True
+		self.settings['msg-part'] = True
+		self.settings['msg-disc'] = True
 
 		# IPC for comunicating between threads
 		self.irc_lock = False
@@ -165,11 +168,13 @@ class IRCSkill(MycroftSkill):
 						match = re.search("^:(.*)!.*@.* JOIN", line, re.M)
 						if match != None:
 							if match.group(1) != self.settings['user']:
-								self.speak(match.group(1) + " has joined the channel")
+								if self.settings['msg-join']:
+									self.speak(match.group(1) + " has joined the channel")
 	
 						match = re.search("^:(.*)!.*@.* PART", line, re.M)
 						if match != None:
-							self.speak(match.group(1) + " has left the channel")
+							if self.settings['msg-part']:
+								self.speak(match.group(1) + " has left the channel")
 	
 						match = re.search("^:(.*)!.*@.* QUIT", line, re.M)
 						if match != None:
@@ -181,7 +186,7 @@ class IRCSkill(MycroftSkill):
 								self.speak("You are reconnected")
 								if was_joined:
 									self._irc_join(irc, self.settings['channel'], self.settings['channel-password'], True)
-							else:
+							elif self.settings['msg-disc']:
 								self.speak(match.group(1) + " has disconnected")
 	
 						match = re.search("^:(.*)!.*@.* PRIVMSG #(.*) :(.*)", line, re.M)
@@ -221,7 +226,7 @@ class IRCSkill(MycroftSkill):
 								self.speak("It looks, like you password is wrong. Please check it")
 
 							if code == 465:
-								self.speak("Your banned on this server")
+								self.speak("You're banned on this server")
 
 						# handling special messages
 						match = re.search("^ERROR :Closing link", line)

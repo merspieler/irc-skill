@@ -18,6 +18,7 @@ tags:
 ## v0.2 (unreleased)
 ### Added
 * "Disconnected by server" handling. Resulting now in a reconnect.
+* Setting for disabling join, part and disconnect messages
 ### Fixed
 * Double messages on QUIT of other users.
 

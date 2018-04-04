@@ -12,11 +12,15 @@ This skill is still under active development.
 ## Examples
 ### Normal use
 _Currently available commands_
-* "connect to irc"
-* "join irc channel"
-* "send irc message"
-* "part from irc channel"
-* "disconnect from irc server"
+* "connect to irc" Connect to the server.
+* "join irc channel" Join the channel.
+* "send irc message" Send a message.
+* "part from irc channel" Leave the channel.
+* "disconnect from irc server" Disconnect from the server.
+
+### Configurational use
+* "enable irc debug" To enter debug mode.
+* "disable irc debug" To leave debug mode.
 
 _**Note** settings are set in the `settings.json` file. Right now it's only possible to join one server and one channel at a time._
 ### Configuration

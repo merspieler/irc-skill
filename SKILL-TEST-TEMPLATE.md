@@ -24,7 +24,7 @@ _Note that the default server is `irc.freenode.net` which connects to the freeno
 
 2. Join a channel:
 	* Say `join irc channel`
-	* The skill responses with `Joining` and with `Joined` as soon as the join was successfull (the check isn't 100% complete yet)
+	* The skill responses with `Joining` and with `Channel <channel> joined` as soon as the join was successfull (the check isn't 100% complete yet) where `<channel>` should be `mycroft`right now.
 
 3. Sending and reciving messages:
 	* Connect with a different irc client to the network or use [this link](https://kiwiirc.com/client/irc.freenode.net:+6669/mycroft) to open one in your browser.

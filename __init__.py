@@ -1,5 +1,6 @@
 from threading import Thread
 from time import sleep
+from time import time
 import select
 import socket
 import socks
@@ -163,6 +164,13 @@ class IRCSkill(MycroftSkill):
 						match = re.search("^PING (.*)$", line, re.M)
 						if match != None:
 							irc.send('PONG ' + match.group(1) + '\r\n')
+							# detect timed out connections
+							if int(time()) - self.last_ping > 240:
+								self.speak("The connection has timed out. I try to reconnect you")
+								self._irc_disconnect(irc, True)
+								self._irc_connect(self.settings['server'], self.settings['port'], self.settings['ssl'], self.settings['server-password'], self.settings['user'], self.settings['password'], True)
+								self.speak("You're reconnected")
+							self.last_ping = int(time())
 	
 						# reciving normal messages
 						match = re.search("^:(.*)!.*@.* JOIN", line, re.M)
@@ -326,6 +334,8 @@ class IRCSkill(MycroftSkill):
 		irc.send("NICK " + user + "\n")
 		if password != "":
 			irc.send("PRIVMSG nickserv :identify %s %s\r\n" % (user, password))
+
+		self.last_ping = int(time())
 
 		if quiet == False:
 			self.speak("Connected")

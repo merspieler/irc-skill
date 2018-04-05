@@ -178,7 +178,7 @@ class IRCSkill(MycroftSkill):
 						match = re.search("^:(.*)!.*@.* JOIN", line, re.M)
 						if match != None:
 							if match.group(1) == self.settings['user']:
-								join_statues = 2
+								join_status = 2
 								self.speak("Joined")
 							else:
 								if self.settings['msg-join']:

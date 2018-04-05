@@ -141,11 +141,13 @@ class IRCSkill(MycroftSkill):
 		self.speak("Debugging disabled")
 
 	def _main_loop(self):
-		connected = False
-		joined = False
+		# Connecttion status: 0 = not connected, 1 = requested, 2 = connected
+		connection_state = 0
+		# Join status: 0 = not joined, 1 = requested, 2 = joined
+		join_statues = 0
 		while True:
 			sleep(2)
-			if connected:
+			if connection_state != 0:
 				text = ""
 				try:
 					ready = select.select([irc], [], [], 2)
@@ -168,14 +170,17 @@ class IRCSkill(MycroftSkill):
 							if int(time()) - self.last_ping > 240:
 								self.speak("The connection has timed out. I try to reconnect you")
 								self._irc_disconnect(irc, True)
-								self._irc_connect(self.settings['server'], self.settings['port'], self.settings['ssl'], self.settings['server-password'], self.settings['user'], self.settings['password'], True)
+								self._irc_connect(self.settings['server'], self.settings['port'], self.settings['ssl'], self.settings['server-password'], self.settings['user'], self.settings['password'])
 								self.speak("You're reconnected")
 							self.last_ping = int(time())
 	
 						# reciving normal messages
 						match = re.search("^:(.*)!.*@.* JOIN", line, re.M)
 						if match != None:
-							if match.group(1) != self.settings['user']:
+							if match.group(1) == self.settings['user']:
+								join_statues = 2
+								self.speak("Joined")
+							else:
 								if self.settings['msg-join']:
 									self.speak(match.group(1) + " has joined the channel")
 	
@@ -188,12 +193,12 @@ class IRCSkill(MycroftSkill):
 						if match != None:
 							if match.group(1) == self.settings['user']:
 								self.speak("You have been disconnected. I try to reconnect you")
-								was_joined = joined
+								was_joined = join_status
 								self._irc_disconnect(irc, True)
-								self._irc_connect(self.settings['server'], self.settings['port'], self.settings['ssl'], self.settings['server-password'], self.settings['user'], self.settings['password'], True)
+								self._irc_connect(self.settings['server'], self.settings['port'], self.settings['ssl'], self.settings['server-password'], self.settings['user'], self.settings['password'])
 								self.speak("You are reconnected")
-								if was_joined:
-									self._irc_join(irc, self.settings['channel'], self.settings['channel-password'], True)
+								if was_joined == 2:
+									self._irc_join(irc, self.settings['channel'], self.settings['channel-password'])
 							elif self.settings['msg-disc']:
 								self.speak(match.group(1) + " has disconnected")
 	
@@ -224,23 +229,34 @@ class IRCSkill(MycroftSkill):
 								self.speak("Return code: " + str(code))
 
 							# This list of handles replies is incomplete
-							if code == 401:
+							# We use the MOTD or the missing MOTD message for verify that a connect was successfull
+							if code == 372:
+								if connection_state != 2:
+									connection_state = 2
+									self.speak("Connected")
+
+							elif code == 401:
 								self.speak("The nickname wasn't found")
 
-							if code == 433:
+							elif code == 422:
+								if connection_state != 2:
+									connection_state = 2
+									self.speak("Connected")
+
+							elif code == 433:
 								self.speak("Your nickname is already in use")
 
-							if code == 464:
+							elif code == 464:
 								self.speak("It looks, like you password is wrong. Please check it")
 
-							if code == 465:
+							elif code == 465:
 								self.speak("You're banned on this server")
 
 						# handling special messages
 						match = re.search("^ERROR :Closing link", line)
 						if match != None:
 							self.speak("The server has closed the connection")
-							connected = False
+							connection_state = 0
 							irc.close()
 
 			cmd = ""
@@ -259,38 +275,38 @@ class IRCSkill(MycroftSkill):
 				# check cmd and take action
 				if cmd == "connect":
 					# TODO add ability to connect to more than one server
-					if connected == False:
-						connected, irc = self._irc_connect(self.settings['server'], self.settings['port'], self.settings['ssl'], self.settings['server-password'], self.settings['user'], self.settings['password'])
+					if connection_state != 2:
+						connection_state, irc = self._irc_connect(self.settings['server'], self.settings['port'], self.settings['ssl'], self.settings['server-password'], self.settings['user'], self.settings['password'])
 					else:
 						self.speak("Already connected")
 	
 				elif cmd == "join":
-					if connected:
-						joined = self._irc_join(irc, self.settings['channel'], self.settings['channel-password'])
+					if connection_state == 2:
+						join_status = self._irc_join(irc, self.settings['channel'], self.settings['channel-password'])
 					else:
 						self.speak("Please connect to a server first")
 	
 				elif cmd == "part":
-					if connected:
-						if joined:
-							joined = self._irc_part(irc, self.settings['channel'])
+					if connection_state == 2:
+						if join_status == 2:
+							join_status = self._irc_part(irc, self.settings['channel'])
 						else:
 							self.speak("I'm in no channel I could part from")
 					else:
 						self.speak("Not connected to a server")
 	
 				elif cmd == "disconnect":
-					if connected:
-						connected = self._irc_disconnect(irc)
+					if connection_state != 0:
+						connection_state = self._irc_disconnect(irc)
 					else:
 						self.speak("I'm to no server connected")
 	
-					if connected == False:
-						joined = False
+					if connection_state == 0:
+						join_status = 0
 	
 				elif cmd == "send":
-					if connected:
-						if joined:
+					if connection_state == 2:
+						if join_status == 2:
 							self._irc_send(irc, "#" + self.settings['channel'], string)
 						else:
 							self.speak("Please join a channel first")
@@ -298,7 +314,7 @@ class IRCSkill(MycroftSkill):
 						self.speak("Please connect to a server and join a channel first")
 
 
-	def _irc_connect(self, server, port, ssl_req, server_password, user, password, quiet=False):
+	def _irc_connect(self, server, port, ssl_req, server_password, user, password):
 
 		# check if the default username is used and if so, ask the user to change it
 		if user == "dummy|m":
@@ -306,6 +322,8 @@ class IRCSkill(MycroftSkill):
 			changed = False
 			while changed == False:
 				changed = self._irc_set_user()
+
+			user = self.settings['user']
 
 		irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket
 
@@ -337,31 +355,25 @@ class IRCSkill(MycroftSkill):
 
 		self.last_ping = int(time())
 
-		if quiet == False:
-			self.speak("Connected")
-		return True, irc
+		return 1, irc
 
-	def _irc_join(self, irc, channel, channel_password, quiet=False):
+	def _irc_join(self, irc, channel, channel_password):
 		string = "JOIN #"+ channel
 		if channel_password != "":
 			string = string + " " + channel_password
 		irc.send(string +"\n")
-		if quiet == False:
-			self.speak("Channel " + channel + " joined")
-		return True
+		return 1
 
-	def _irc_part(self, irc, channel, quiet=False):
+	def _irc_part(self, irc, channel):
 		irc.send("PART #" + channel)
-		if quiet == False:
-			self.speak("Parted")
-		return False # this is the value that's written in `joined`
+		return 0 # this is the value that's written in `joined`
 
 	def _irc_disconnect(self, irc, quiet=False):
 		irc.send("QUIT :Disconnected my mycroft\n")
 		irc.close()
 		if quiet == False:
 			self.speak("Disconnected")
-		return False # this is the value that's written in `connected`
+		return 0 # this is the value that's written in `connected`
 
 	def _irc_send(self, irc, to, msg):
 		irc.send("PRIVMSG " + to + " :" + msg + "\n")

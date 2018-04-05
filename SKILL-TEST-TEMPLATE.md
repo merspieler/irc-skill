@@ -24,7 +24,7 @@ _Note that the default server is `irc.freenode.net` which connects to the freeno
 
 2. Join a channel:
 	* Say `join irc channel`
-	* The skill responses with `Joining` and with `Channel <channel> joined` as soon as the join was successfull (the check isn't 100% complete yet) where `<channel>` should be `mycroft`right now.
+	* The skill responses with `Joining` and with `Channel <channel> joined` as soon as the join was successfull where `<channel>` should be `mycroft`right now.
 
 3. Sending and reciving messages:
 	* Connect with a different irc client to the network or use [this link](https://kiwiirc.com/client/irc.freenode.net:+6669/mycroft) to open one in your browser.
@@ -35,7 +35,7 @@ _Note that the default server is `irc.freenode.net` which connects to the freeno
 	* The skill should response with `<user> has writtent in mycroft: <your text>` where  `<user>` is the username in your client and `<your text>` is what you've typed in your client.
 
 4. Disconnect:
-	* Say `Disconnect from irc server`
+	* Say `Disconnect from irc`
 	* The skill should response with `Disconnecting` and `Disconnected`.
 
 You know now the basics of how to use this skill. Play with it a bit around (settings can't be changed by voice yet) or just have fun chatting with your mycroft mates in `#mycroft` on freenode.

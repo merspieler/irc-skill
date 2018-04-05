@@ -20,8 +20,12 @@ tags:
 * "Disconnected by server" handling. Resulting now in a reconnect.
 * Handling timedout connections.
 * Setting for disabling join, part and disconnect messages.
+* Check if a join or connect has really happend.
+### Changed
+* `Disconnect from irc server` -> `Disconnect from irc`
 ### Fixed
 * Double messages on QUIT of other users.
+* New username was only used after reconnect.
 
 ## [v0.1.1](https://github.com/merspieler/irc-skill/releases/tag/v0.1.1)
 ### Fixed

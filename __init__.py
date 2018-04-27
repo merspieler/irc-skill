@@ -212,7 +212,6 @@ class IRCSkill(MycroftSkill):
 	
 						match = re.search("^:(.*)!.*@.* PRIVMSG " + re.escape(self.settings['user']) + " :(.*)$", line, re.M)
 						if match != None:
-							self.speak(line)
 							self.speak(match.group(1) + " has written you a private message: " + match.group(2))
 
 						match = re.search(":(.*)!.*@.* NOTICE " + re.escape(self.settings['user']) + " :(.*)", line)

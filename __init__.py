@@ -152,7 +152,7 @@ class IRCSkill(MycroftSkill):
 				try:
 					ready = select.select([irc], [], [], 2)
 					if ready[0]:
-						text = irc.recv(2040)
+						text = irc.recv(2040).decode()
 				except Exception:
 					continue
 
@@ -165,7 +165,7 @@ class IRCSkill(MycroftSkill):
 						# Prevent Timeout
 						match = re.search("^PING (.*)$", line, re.M)
 						if match != None:
-							irc.send('PONG ' + match.group(1) + '\r\n')
+							irc.send(('PONG ' + match.group(1) + '\r\n').encode())
 							# detect timed out connections
 							if int(time()) - self.last_ping > 240:
 								self.speak("The connection has timed out. I try to reconnect you")
@@ -346,11 +346,11 @@ class IRCSkill(MycroftSkill):
 
 		irc.setblocking(0)
 		if server_password != "":
-			irc.send("PASS %s\n" % (password))
-		irc.send("USER " + user + " " + user + " " + user + " :IRC via VOICE -> Mycroft\n")
-		irc.send("NICK " + user + "\n")
+			irc.send(("PASS %s\n" % (password)).encode())
+		irc.send(("USER " + user + " " + user + " " + user + " :IRC via VOICE -> Mycroft\n").encode())
+		irc.send(("NICK " + user + "\n").encode())
 		if password != "":
-			irc.send("PRIVMSG nickserv :identify %s %s\r\n" % (user, password))
+			irc.send(("PRIVMSG nickserv :identify %s %s\r\n" % (user, password)).encode())
 
 		self.last_ping = int(time())
 
@@ -360,22 +360,22 @@ class IRCSkill(MycroftSkill):
 		string = "JOIN #"+ channel
 		if channel_password != "":
 			string = string + " " + channel_password
-		irc.send(string +"\n")
+		irc.send((string +"\n").encode())
 		return 1
 
 	def _irc_part(self, irc, channel):
-		irc.send("PART #" + channel)
+		irc.send(("PART #" + channel).encode())
 		return 0 # this is the value that's written in `joined`
 
 	def _irc_disconnect(self, irc, quiet=False):
-		irc.send("QUIT :Disconnected my mycroft\n")
+		irc.send(("QUIT :Disconnected my mycroft\n").encode())
 		irc.close()
 		if quiet == False:
 			self.speak("Disconnected")
 		return 0 # this is the value that's written in `connected`
 
 	def _irc_send(self, irc, to, msg):
-		irc.send("PRIVMSG " + to + " :" + msg + "\n")
+		irc.send(("PRIVMSG " + to + " :" + msg + "\n").encode())
 		self.speak("Message sent")
 
 	def _irc_set_user(self):
